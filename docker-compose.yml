@@ -1,0 +1,69 @@
+services:
+  mssql:
+    container_name: mssql
+    # 測試是否有檔案，如果有檔案就代表已經設定完成
+    healthcheck:
+      test: ["CMD", "sh", "-c", "test -f /tmp/configure-db-finished"]
+      interval: 5s
+      timeout: 10s
+      retries: 6
+      start_period: 10s
+    image: karylpudding/music-bot-mssql
+    restart: always
+    env_file:
+      - ./.env
+    ports:
+      - 0.0.0.0:${MSSQL_HOST_PORT}:1433
+    networks:
+      - mssql
+  
+  lavalink:
+    image: fredboat/lavalink:cdc0a89
+    container_name: lavalink
+    healthcheck:
+      test: 'echo lavalink'
+      interval: 10s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    volumes:
+      # mount application.yml from the same directory or use environment variables
+      - ./application.yml:/opt/Lavalink/application.yml
+      # persist plugins between restarts, make sure to set the correct permissions (user: 322, group: 322)
+      - ./plugins/:/opt/Lavalink/plugins/
+    networks:
+      - lavalink
+    expose:
+      # lavalink exposes port 2333 to connect to for other containers (this is for documentation purposes only)
+      - ${LAVALINK_SERVER_PORT}
+    ports:
+      # you only need this if you want to make your lavalink accessible from outside of containers
+      - "${LAVALINK_SERVER_PORT}:${LAVALINK_SERVER_PORT}"
+    env_file:
+      - ./.env
+    depends_on:
+      mssql:
+        condition: service_healthy
+
+  app:
+    container_name: app
+    image: karylpudding/music-bot-app:latest
+    restart: always
+    env_file:
+      - ./.env
+    networks:
+      - lavalink
+      - mssql
+    depends_on:
+      lavalink:
+        condition: service_healthy
+
+networks:
+  # create a lavalink network you can add other containers to, to give them access to Lavalink
+  lavalink:
+    name: lavalink
+
+  mssql:
+    name: mssql
+
+  
