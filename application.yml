@@ -18,8 +18,8 @@ plugins:
       - WEBEMBEDDED
     oauth:
       enabled: true
-      skipInitialization: true
-      refreshToken: "your refresh token"
+      #skipInitialization: true
+      #refreshToken: "your refresh token"
     clientOptions:
       ANDROID_MUSIC:
         playback: false
